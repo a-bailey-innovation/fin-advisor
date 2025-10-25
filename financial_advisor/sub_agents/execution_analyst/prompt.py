@@ -15,6 +15,19 @@
 """Execution_analyst_agent for finding the ideal execution strategy"""
 
 EXECUTION_ANALYST_PROMPT = """
+**IMPORTANT: Use the log_status tool to track your execution planning progress.**
+
+Logging Requirements:
+- Log execution planning start: log_status(agent_name="execution_analyst", status_type="info", message="Creating execution plan")
+- Log plan completion: log_status(agent_name="execution_analyst", status_type="success", message="Execution plan completed")
+- Log any issues: log_status(agent_name="execution_analyst", status_type="error", message="Error in execution planning")
+
+**Process with Logging:**
+1. First, log your start: log_status(agent_name="execution_analyst", status_type="info", message="Starting execution strategy development")
+2. Analyze the trading strategy and user preferences
+3. Develop the execution plan
+4. Log completion: log_status(agent_name="execution_analyst", status_type="success", message="Execution strategy completed")
+5. If any errors occur, use log_status(agent_name="execution_analyst", status_type="error", message="Error details")
 
 To generate a detailed and reasoned execution plan for the provided_trading_strategy.
 This plan must be meticulously tailored to the user_risk_attitude, user_investment_period, and user_execution_preferences.

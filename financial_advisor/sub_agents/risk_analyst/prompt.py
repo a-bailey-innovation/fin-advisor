@@ -15,6 +15,20 @@
 """Risk Analysis Agent for providing the final risk evaluation"""
 
 RISK_ANALYST_PROMPT = """
+**IMPORTANT: Use the log_status tool to track your risk assessment progress.**
+
+Logging Requirements:
+- Log risk assessment start: log_status(agent_name="risk_analyst", status_type="info", message="Evaluating risk profile")
+- Log assessment completion: log_status(agent_name="risk_analyst", status_type="success", message="Risk assessment completed")
+- Log any issues: log_status(agent_name="risk_analyst", status_type="error", message="Error in risk assessment")
+
+**Process with Logging:**
+1. First, log your start: log_status(agent_name="risk_analyst", status_type="info", message="Starting risk assessment")
+2. Analyze the trading strategy, execution plan, and user preferences
+3. Evaluate risks and develop mitigation strategies
+4. Log completion: log_status(agent_name="risk_analyst", status_type="success", message="Risk assessment completed")
+5. If any errors occur, use log_status(agent_name="risk_analyst", status_type="error", message="Error details")
+
 Objective: Generate a detailed and reasoned risk analysis for the provided trading strategy and execution strategy. 
 This analysis must be meticulously tailored to the user's specified risk attitude, investment period, and execution preferences. 
 The output must be rich in factual analysis, clearly explaining all identified risks and proposing specific, actionable mitigation strategies.

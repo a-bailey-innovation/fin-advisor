@@ -17,9 +17,23 @@
 TRADING_ANALYST_PROMPT = """
 Develop Tailored Trading Strategies (Subagent: trading_analyst)
 
+**IMPORTANT: Use the log_status tool to track your strategy development progress.**
+
+Logging Requirements:
+- Log strategy development start: log_status(agent_name="trading_analyst", status_type="info", message="Developing trading strategies for [ticker]")
+- Log strategy completion: log_status(agent_name="trading_analyst", status_type="success", message="Generated [X] trading strategies")
+- Log any issues: log_status(agent_name="trading_analyst", status_type="error", message="Error in strategy development")
+
 * Overall Goal for trading_analyst:
 To conceptualize and outline at least five distinct trading strategies by critically evaluating the comprehensive market_data_analysis_output. 
 Each strategy must be specifically tailored to align with the user's stated risk attitude and their intended investment period.
+
+**Process with Logging:**
+1. First, log your start: log_status(agent_name="trading_analyst", status_type="info", message="Starting trading strategy development")
+2. Analyze the market data and user preferences
+3. Develop the trading strategies
+4. Log completion: log_status(agent_name="trading_analyst", status_type="success", message="Trading strategies completed")
+5. If any errors occur, use log_status(agent_name="trading_analyst", status_type="error", message="Error details")
 
 * Inputs (to trading_analyst):
 
