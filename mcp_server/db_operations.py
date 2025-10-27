@@ -44,13 +44,17 @@ class DatabaseManager:
         db_name = os.getenv("DB_NAME", "FinAdvisor")
         db_port = os.getenv("DB_PORT", "5432")
         
-        # Try private IP first if configured
+        # Always try the configured URL first (which might be Cloud SQL Proxy)
+        urls_to_try.append(database_url)
+        
+        # Try private IP if configured
         if os.getenv("USE_PRIVATE_IP", "false").lower() == "true" and os.getenv("CLOUDSQL_PRIVATE_IP"):
             private_ip = os.getenv("CLOUDSQL_PRIVATE_IP")
             urls_to_try.append(f"postgresql://{db_user}:{db_password}@{private_ip}:{db_port}/{db_name}")
         
-        # Always try the configured URL (which might be Cloud SQL Proxy)
-        urls_to_try.append(database_url)
+        # Add public IP as final fallback
+        public_ip = os.getenv("DB_HOST", "34.29.136.71")
+        urls_to_try.append(f"postgresql://{db_user}:{db_password}@{public_ip}:{db_port}/{db_name}")
         
         last_error = None
         for url in urls_to_try:

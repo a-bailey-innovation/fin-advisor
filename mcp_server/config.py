@@ -53,16 +53,25 @@ def get_database_url() -> str:
     print(f"DEBUG: CLOUDSQL_CONNECTION_NAME={CLOUDSQL_CONNECTION_NAME}")
     print(f"DEBUG: VPC_CONNECTOR_NAME={os.getenv('VPC_CONNECTOR_NAME')}")
     
-    if CLOUD_RUN_MODE:
-        # Use public IP for Cloud Run (preferred due to proxy issues)
-        host = DB_HOST
-        print(f"Using public IP: {host}")
+    # Check if Cloud SQL Proxy is available (connection name is set)
+    if CLOUDSQL_CONNECTION_NAME:
+        # Use Cloud SQL Proxy (localhost:5432)
+        host = "127.0.0.1"
+        port = "5432"
+        print(f"Using Cloud SQL Proxy: {host}:{port}")
+        print(f"Proxy connection: {CLOUDSQL_CONNECTION_NAME}")
+    elif CLOUD_RUN_MODE and USE_PRIVATE_IP and CLOUDSQL_PRIVATE_IP:
+        # Use private IP via VPC connector
+        host = CLOUDSQL_PRIVATE_IP
+        port = DB_PORT
+        print(f"Using private IP via VPC: {host}:{port}")
     else:
-        # Use public IP (local development)
+        # Use public IP (fallback)
         host = DB_HOST
-        print(f"Using public IP: {host}")
+        port = DB_PORT
+        print(f"Using public IP: {host}:{port}")
     
-    return f"postgresql://{DB_USER}:{DB_PASSWORD}@{host}:{DB_PORT}/{DB_NAME}"
+    return f"postgresql://{DB_USER}:{DB_PASSWORD}@{host}:{port}/{DB_NAME}"
 
 # Database connection string - will be set at runtime
 DATABASE_URL = None
