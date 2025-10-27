@@ -1,132 +1,170 @@
-# Financial Advisor CloudSQL Integration
+# Financial Advisor MCP HTTP Server
 
-This directory contains the CloudSQL integration components for the Financial Advisor application, including both MCP server implementation and direct database tools.
+This directory contains the HTTP REST API server for Financial Advisor CloudSQL integration, designed to run on Google Cloud Run.
 
 ## Overview
 
-The Financial Advisor now includes status logging capabilities that save agent execution information to a CloudSQL PostgreSQL database. This allows for:
-
-- Tracking agent execution status
-- Monitoring performance and errors
-- Auditing financial advice sessions
-- Debugging and analytics
+The MCP HTTP Server provides a REST API interface for logging agent status messages to CloudSQL database. It's designed to be deployed separately from the Financial Advisor agent on Cloud Run with VPC connector for secure database access.
 
 ## Architecture
 
-### Direct Database Tool (Recommended)
-- **File**: `financial_advisor/tools/__init__.py`
-- **Approach**: Direct asyncpg connection to CloudSQL
-- **Benefits**: Simple, reliable, no additional infrastructure
-- **Usage**: Automatically available to all agents via `status_logger_tool`
+- **FastAPI**: Modern async web framework with automatic OpenAPI documentation
+- **CloudSQL**: PostgreSQL database for storing agent status logs
+- **VPC Connector**: Secure private IP access to CloudSQL (no public IPs)
+- **IAM Authentication**: Service-to-service authentication using Google Cloud IAM
+- **Cloud Run**: Serverless container platform for scalable deployment
 
-### MCP Server (Alternative)
-- **Files**: `mcp_server/server.py`, `mcp_server/db_operations.py`
-- **Approach**: Model Context Protocol server for database operations
-- **Benefits**: Decoupled, reusable across applications
-- **Usage**: Can be run standalone or integrated with other MCP clients
+## Environment Configuration
 
-## Database Schema
+### Local Development
 
-```sql
-CREATE TABLE agent_status_logs (
-    id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    session_id VARCHAR(255),
-    user_id VARCHAR(255),
-    agent_name VARCHAR(100),
-    status_type VARCHAR(50),
-    message TEXT,
-    metadata JSONB
-);
-```
+1. Copy the environment template:
+   ```bash
+   cp env.example .env
+   ```
 
-## Configuration
+2. Update `.env` with your local database settings:
+   ```env
+   CLOUD_RUN_MODE=false
+   DB_HOST=your-local-db-host
+   DB_USER=your-db-user
+   DB_PASSWORD=your-db-password
+   ```
 
-The system uses environment variables for database configuration:
+### Cloud Run Deployment
 
-```env
-# CloudSQL Configuration
-CLOUDSQL_CONNECTION_NAME=agent-space-demo-475212:us-central1:finadvisor-db
-DB_NAME=FinAdvisor
-DB_USER=finadvisor_user
-DB_PASSWORD=FinAdvisorUser2024!
-DB_HOST=34.29.136.71
-DB_PORT=5432
-```
+Environment variables are automatically set during deployment via the deployment script. No manual `.env` file needed in production.
 
-## Usage
+## API Endpoints
 
-### Automatic Logging
-The status logger tool is automatically available to all agents. Agents can log status messages like:
+### Health Check
+- **GET** `/health` - Service health status
+- **GET** `/` - Service information
 
-```python
-# This happens automatically when agents use the log_status tool
-await status_logger_tool.run(
-    agent_name="data_analyst",
-    status_type="info", 
-    message="Starting market analysis for AAPL",
-    metadata={"ticker": "AAPL", "analysis_type": "comprehensive"}
-)
-```
+### Status Logging
+- **POST** `/log_status` - Log agent status message
+- **GET** `/query_logs` - Query recent status logs
 
-### Manual Testing
-Test the database connection:
+### Documentation
+- **GET** `/docs` - Interactive API documentation (Swagger UI)
+- **GET** `/redoc` - Alternative API documentation
+
+## Local Development
+
+### Prerequisites
+- Python 3.12+
+- `uv` package manager
+- Access to CloudSQL database
+
+### Setup
 ```bash
-uv run python mcp_server/test_db_connection.py
+# Install dependencies
+uv sync
+
+# Copy environment configuration
+cp env.example .env
+# Edit .env with your database settings
+
+# Run the server locally
+uv run uvicorn http_server:app --host 0.0.0.0 --port 8080 --reload
 ```
 
-Test the status logger tool:
+### Testing
 ```bash
-uv run python tests/test_status_logger.py
+# Test health endpoint
+curl http://localhost:8080/health
+
+# Test API documentation
+open http://localhost:8080/docs
 ```
 
-## Deployment
+## Cloud Run Deployment
 
-The CloudSQL integration is automatically included when deploying the Financial Advisor:
+### Prerequisites
+- Google Cloud project with billing enabled
+- CloudSQL instance running
+- VPC network configured
 
+### Deploy
 ```bash
-uv run deployment/deploy.py --create
+# Set up VPC for private CloudSQL access
+uv run ../deployment/setup_vpc.py
+
+# Deploy to Cloud Run
+uv run ../deployment/deploy_mcp_server.py
 ```
 
-The deployment includes all necessary dependencies and the status logger tool is available to the deployed agent.
+### Environment Variables (Set Automatically)
+- `CLOUD_RUN_MODE=true`
+- `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_HOST`, `DB_PORT`
+- `USE_PRIVATE_IP=true` (when VPC connector is used)
+- `CLOUDSQL_PRIVATE_IP` (private IP address)
+- `ENABLE_CORS=true`
+- `LOG_LEVEL=INFO`
+
+## Security
+
+- **VPC Connector**: Database access via private IP only
+- **IAM Authentication**: Service-to-service authentication
+- **CORS Configuration**: Configurable cross-origin resource sharing
+- **Environment Variables**: Sensitive data via environment variables
+- **No Public IPs**: Database not accessible from internet
 
 ## Monitoring
 
-You can query the status logs directly from the CloudSQL database:
-
-```sql
--- Recent logs
-SELECT * FROM agent_status_logs 
-ORDER BY timestamp DESC 
-LIMIT 100;
-
--- Logs by agent
-SELECT * FROM agent_status_logs 
-WHERE agent_name = 'data_analyst'
-ORDER BY timestamp DESC;
-
--- Error logs
-SELECT * FROM agent_status_logs 
-WHERE status_type = 'error'
-ORDER BY timestamp DESC;
-```
+- **Health Checks**: Built-in health check endpoint
+- **Structured Logging**: JSON-formatted logs for Cloud Logging
+- **Metrics**: Request metrics via Cloud Run monitoring
+- **Error Tracking**: Comprehensive error handling and logging
 
 ## Troubleshooting
 
-### Connection Issues
-1. Verify CloudSQL instance is running: `gcloud sql instances describe finadvisor-db`
-2. Check authorized networks: Ensure your IP is in the authorized networks list
-3. Verify credentials in `.env` file
-4. Test connection: `uv run python mcp_server/test_db_connection.py`
+### Common Issues
 
-### Tool Issues
-1. Check that the tool is properly imported in `financial_advisor/agent.py`
-2. Verify database schema exists: Run `mcp_server/create_schema.sql`
-3. Check logs for specific error messages
+1. **Database Connection Failed**
+   - Check VPC connector status
+   - Verify CloudSQL private IP configuration
+   - Check firewall rules
 
-## Security Notes
+2. **Authentication Errors**
+   - Verify service account permissions
+   - Check IAM roles (Cloud SQL Client)
 
-- Database credentials are stored in `.env` file (not committed to git)
-- Consider using Cloud SQL Auth Proxy for production
-- Monitor database access logs
-- Implement proper backup strategies for production use
+3. **CORS Issues**
+   - Configure `CORS_ORIGINS` environment variable
+   - Check `ENABLE_CORS` setting
+
+### Debug Commands
+```bash
+# Check service status
+gcloud run services describe finadvisor-mcp-server --region=us-central1
+
+# View logs
+gcloud logs read --service=finadvisor-mcp-server --limit=50
+
+# Test endpoints
+curl -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+     https://your-service-url.run.app/health
+```
+
+## File Structure
+
+```
+mcp_server/
+├── http_server.py          # FastAPI application
+├── config.py              # Configuration management
+├── db_operations.py       # Database operations
+├── Dockerfile             # Container configuration
+├── requirements.txt       # Python dependencies
+├── env.example           # Environment template
+└── README.md             # This file
+```
+
+## Integration with Financial Advisor
+
+The Financial Advisor agent connects to this MCP server via HTTP API instead of direct database connection. This provides:
+
+- **Scalability**: Independent scaling of logging service
+- **Security**: Centralized database access control
+- **Monitoring**: Dedicated logging service monitoring
+- **Flexibility**: Can be used by multiple services

@@ -17,9 +17,10 @@
 import asyncio
 import json
 import logging
+import os
 from typing import Dict, List, Optional, Any
 import asyncpg
-from .config import DATABASE_URL
+from config import get_database_url
 
 logger = logging.getLogger(__name__)
 
@@ -31,17 +32,58 @@ class DatabaseManager:
     
     async def connect(self) -> None:
         """Establish connection pool to CloudSQL"""
-        try:
-            self.pool = await asyncpg.create_pool(
-                DATABASE_URL,
-                min_size=1,
-                max_size=10,
-                command_timeout=60
-            )
-            logger.info("Connected to CloudSQL database")
-        except Exception as e:
-            logger.error(f"Failed to connect to database: {e}")
-            raise
+        # Get database URL at runtime
+        database_url = get_database_url()
+        
+        # Try private IP first, then fallback to public IP
+        urls_to_try = []
+        
+        # Get environment variables
+        db_user = os.getenv("DB_USER", "finadvisor_user")
+        db_password = os.getenv("DB_PASSWORD", "FinAdvisorUser2024!")
+        db_name = os.getenv("DB_NAME", "FinAdvisor")
+        db_port = os.getenv("DB_PORT", "5432")
+        
+        # Try private IP first if configured
+        if os.getenv("USE_PRIVATE_IP", "false").lower() == "true" and os.getenv("CLOUDSQL_PRIVATE_IP"):
+            private_ip = os.getenv("CLOUDSQL_PRIVATE_IP")
+            urls_to_try.append(f"postgresql://{db_user}:{db_password}@{private_ip}:{db_port}/{db_name}")
+        
+        # Always try the configured URL (which might be Cloud SQL Proxy)
+        urls_to_try.append(database_url)
+        
+        last_error = None
+        for url in urls_to_try:
+            try:
+                logger.info(f"Attempting to connect to database with URL: {url}")
+                
+                # First try a simple connection test
+                logger.info("Testing simple connection...")
+                test_conn = await asyncpg.connect(url, command_timeout=10)
+                await test_conn.execute("SELECT 1")
+                await test_conn.close()
+                logger.info("Simple connection test successful!")
+                
+                # Now create the connection pool
+                logger.info("Creating connection pool...")
+                self.pool = await asyncpg.create_pool(
+                    url,
+                    min_size=1,
+                    max_size=10,
+                    command_timeout=60  # Increased timeout for Cloud SQL Proxy
+                )
+                logger.info("Connected to CloudSQL database successfully")
+                return
+            except Exception as e:
+                logger.warning(f"Failed to connect with URL {url}: {e}")
+                logger.warning(f"Error type: {type(e).__name__}")
+                logger.warning(f"Error details: {str(e)}")
+                last_error = e
+                continue
+        
+        # If all attempts failed
+        logger.error(f"Failed to connect to database with any URL. Last error: {last_error}")
+        raise last_error
     
     async def close(self) -> None:
         """Close database connection pool"""

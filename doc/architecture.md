@@ -26,8 +26,9 @@ graph TB
             SL[Status Logs Table]
         end
         
-        subgraph "Cloud Run (Optional)"
-            MCP[MCP Server]
+        subgraph "Cloud Run"
+            MCP[MCP HTTP Server]
+            VPC[VPC Connector]
         end
         
         subgraph "Cloud Storage"
@@ -49,7 +50,8 @@ graph TB
     DA --> GS
     DA --> NEWS
     FC --> MCP
-    MCP --> DB
+    MCP --> VPC
+    VPC --> DB
     SL --> DB
     FC --> BUCKET
 ```
@@ -138,7 +140,8 @@ sequenceDiagram
 
 #### **Deployment & Infrastructure**
 - **Google Cloud Platform**: Hosting and infrastructure
-- **Cloud Run**: Optional MCP server deployment
+- **Cloud Run**: HTTP MCP server deployment with VPC connector
+- **VPC Connector**: Secure private IP access to CloudSQL
 - **Vertex AI**: Agent execution environment
 
 ### 4. Database Schema
@@ -167,7 +170,9 @@ CREATE TABLE agent_status_logs (
 - Sequential execution with clear dependencies
 
 #### **Status Logging**
-- All agents log their progress to CloudSQL
+- All agents log their progress to CloudSQL via HTTP API or direct connection
+- HTTP MCP server provides scalable logging service on Cloud Run
+- VPC connector ensures secure private IP access to CloudSQL
 - Real-time monitoring of agent execution
 - Error tracking and performance analytics
 
@@ -186,6 +191,10 @@ uv run deployment/test_deployment.py
 ```bash
 # Deploy to Vertex AI Agent Engine
 uv run deployment/deploy.py --create
+
+# Deploy MCP server to Cloud Run (optional)
+uv run deployment/setup_vpc.py
+uv run deployment/deploy_mcp_server.py
 
 # Access deployed agent
 uv run deployment/test_deployment.py
@@ -244,27 +253,29 @@ GROUP BY agent_name;
 ### 10. Future Enhancements
 
 #### **Planned Features**
-- **MCP Server Deployment**: Move to Cloud Run for better scalability
 - **Advanced Analytics**: ML-based performance insights
 - **Multi-tenant Support**: User-specific data isolation
 - **API Integration**: RESTful endpoints for external access
+- **Monitoring Dashboard**: Real-time agent performance visualization
 
 #### **Architecture Evolution**
 ```mermaid
 graph LR
     subgraph "Current Architecture"
-        A1[Direct DB Connection]
+        A1[HTTP MCP Server]
+        A2[VPC Connector]
+        A3[CloudSQL Private IP]
     end
     
     subgraph "Future Architecture"
-        A2[Cloud Run MCP Server]
-        A3[HTTP API Layer]
         A4[Advanced Analytics]
+        A5[Monitoring Dashboard]
+        A6[Multi-tenant Support]
     end
     
-    A1 --> A2
-    A2 --> A3
-    A3 --> A4
+    A1 --> A4
+    A2 --> A5
+    A3 --> A6
 ```
 
 ## File Structure

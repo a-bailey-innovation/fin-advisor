@@ -124,57 +124,58 @@ uv run deployment/test_deployment.py
 gcloud logging read "resource.type=vertex_ai_agent" --limit=50
 ```
 
-### Option 2: Deployment with CloudSQL Logging
+### Option 2: Deployment with CloudSQL Logging via Cloud Run
 
-#### 1. Deploy MCP Server to Cloud Run
+#### 1. Set Up VPC for CloudSQL Private IP Access
 ```bash
-# Create deployment script
-cat > deployment/deploy_mcp_server.py << 'EOF'
-#!/usr/bin/env python3
-import os
-import subprocess
-import sys
+# Set up VPC network and connector for secure CloudSQL access
+uv run deployment/setup_vpc.py
+```
 
-def deploy_mcp_server():
-    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-    region = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
-    service_name = "finadvisor-mcp-server"
-    
-    cmd = [
-        "gcloud", "run", "deploy", service_name,
-        "--source", "mcp_server",
-        "--platform", "managed",
-        "--region", region,
-        "--project", project_id,
-        "--allow-unauthenticated",
-        "--set-env-vars", f"DB_USER={os.getenv('DB_USER')},DB_PASSWORD={os.getenv('DB_PASSWORD')},DB_NAME={os.getenv('DB_NAME')},DB_HOST={os.getenv('DB_HOST')},DB_PORT={os.getenv('DB_PORT')}",
-        "--memory", "512Mi",
-        "--cpu", "1",
-        "--max-instances", "10"
-    ]
-    
-    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-    print(result.stdout)
-    return True
+This script will:
+- Create a VPC network (`finadvisor-vpc`)
+- Create a VPC connector (`finadvisor-vpc-connector`)
+- Enable private IP for CloudSQL instance
+- Create necessary firewall rules
+- Output the CloudSQL private IP address
 
-if __name__ == "__main__":
-    deploy_mcp_server()
-EOF
-
-# Make executable and run
-chmod +x deployment/deploy_mcp_server.py
+#### 2. Deploy MCP Server to Cloud Run
+```bash
+# Deploy the HTTP MCP server to Cloud Run with VPC connector
 uv run deployment/deploy_mcp_server.py
 ```
 
-#### 2. Update Environment Variables
+This script will:
+- Create a service account with Cloud SQL Client role
+- Build and deploy the MCP server to Cloud Run
+- Configure VPC connector for private CloudSQL access
+- Set up IAM authentication
+- Output the service URL
+
+#### 3. Update Environment Variables
 ```bash
-# Get the Cloud Run URL from deployment output
-echo "MCP_SERVER_URL=https://your-mcp-server-url.run.app" >> .env
+# Copy the example environment file
+cp env.example .env
+
+# Update with your values (get MCP_SERVER_URL from deployment output)
+# Set USE_MCP_HTTP_SERVER=true to enable HTTP logging
+# Set CLOUDSQL_PRIVATE_IP=<private-ip-from-vpc-setup>
+# Set USE_PRIVATE_IP=true
 ```
 
-#### 3. Deploy Financial Advisor with Logging
+#### 4. Deploy Financial Advisor with HTTP Logging
 ```bash
 uv run deployment/deploy.py --create
+```
+
+#### 5. Test the Complete Setup
+```bash
+# Test the deployed agent
+uv run deployment/test_deployment.py
+
+# Test MCP server endpoints
+curl https://your-mcp-server-url.run.app/health
+curl https://your-mcp-server-url.run.app/query_logs
 ```
 
 ## Verification and Testing
@@ -198,6 +199,9 @@ gcloud logging read "resource.type=vertex_ai_agent" --limit=50
 
 # View Cloud Run logs (if using MCP server)
 gcloud logs read --service=finadvisor-mcp-server --limit=50
+
+# View MCP server logs
+gcloud logs read --service=finadvisor-mcp-server --limit=50 --format="table(timestamp,severity,textPayload)"
 
 # Check database logs
 uv run python -c "
@@ -259,6 +263,33 @@ gcloud compute project-info describe --project=YOUR_PROJECT_ID
 # Enable required APIs
 gcloud services enable aiplatform.googleapis.com
 gcloud services enable storage.googleapis.com
+```
+
+#### 5. VPC and CloudSQL Connectivity Issues
+```bash
+# Check VPC connector status
+gcloud compute networks vpc-access connectors describe finadvisor-vpc-connector --region=us-central1
+
+# Check CloudSQL private IP
+gcloud sql instances describe finadvisor-db --format="value(ipAddresses[0].ipAddress)"
+
+# Test VPC connectivity
+gcloud compute ssh your-instance --zone=us-central1-a --command="ping -c 3 10.0.0.1"
+
+# Check firewall rules
+gcloud compute firewall-rules list --filter="name~allow-cloudsql"
+```
+
+#### 6. MCP Server Issues
+```bash
+# Check Cloud Run service status
+gcloud run services describe finadvisor-mcp-server --region=us-central1
+
+# View Cloud Run logs
+gcloud logs read --service=finadvisor-mcp-server --limit=50
+
+# Test MCP server endpoints
+curl -H "Authorization: Bearer $(gcloud auth print-access-token)" https://your-mcp-server-url.run.app/health
 ```
 
 ### Debug Commands

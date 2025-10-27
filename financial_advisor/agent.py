@@ -44,7 +44,8 @@ financial_coordinator = LlmAgent(
         AgentTool(agent=trading_analyst_agent),
         AgentTool(agent=execution_analyst_agent),
         AgentTool(agent=risk_analyst_agent),
-        status_logger_tool,
+        # Temporarily disable status logger tool for deployment
+        # status_logger_tool,
     ],
 )
 
