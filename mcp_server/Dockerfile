@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Cloud SQL Auth Proxy (v2)
+# Install Cloud SQL Auth Proxy (v2) with explicit PostgreSQL support
 RUN wget https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.8.0/cloud-sql-proxy.linux.amd64 -O cloud-sql-proxy \
     && chmod +x cloud-sql-proxy \
     && mv cloud-sql-proxy /usr/local/bin/

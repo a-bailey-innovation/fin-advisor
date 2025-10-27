@@ -51,17 +51,14 @@ def get_database_url() -> str:
     print(f"DEBUG: USE_PRIVATE_IP={USE_PRIVATE_IP}")
     print(f"DEBUG: CLOUDSQL_PRIVATE_IP={CLOUDSQL_PRIVATE_IP}")
     print(f"DEBUG: CLOUDSQL_CONNECTION_NAME={CLOUDSQL_CONNECTION_NAME}")
+    print(f"DEBUG: VPC_CONNECTOR_NAME={os.getenv('VPC_CONNECTOR_NAME')}")
     
-    if CLOUD_RUN_MODE and USE_PRIVATE_IP and CLOUDSQL_PRIVATE_IP:
-        # Use private IP for VPC connector
-        host = CLOUDSQL_PRIVATE_IP
-        print(f"Using private IP: {host}")
-    elif CLOUD_RUN_MODE and CLOUDSQL_CONNECTION_NAME and os.getenv("VPC_CONNECTOR_NAME"):
-        # Use Cloud SQL Proxy for Cloud Run with VPC connector
-        host = "127.0.0.1"  # Cloud SQL Proxy listens on localhost
-        print(f"Using Cloud SQL Proxy: {host}")
+    if CLOUD_RUN_MODE:
+        # Use public IP for Cloud Run (preferred due to proxy issues)
+        host = DB_HOST
+        print(f"Using public IP: {host}")
     else:
-        # Use public IP (fallback)
+        # Use public IP (local development)
         host = DB_HOST
         print(f"Using public IP: {host}")
     
