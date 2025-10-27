@@ -44,7 +44,7 @@ class DatabaseManager:
         db_name = os.getenv("DB_NAME", "FinAdvisor")
         db_port = os.getenv("DB_PORT", "5432")
         
-        # Always try the configured URL first (which might be Cloud SQL Proxy)
+        # Always try the configured URL first (direct connection)
         urls_to_try.append(database_url)
         
         # Try private IP if configured
@@ -63,7 +63,7 @@ class DatabaseManager:
                 
                 # First try a simple connection test
                 logger.info("Testing simple connection...")
-                test_conn = await asyncpg.connect(url, command_timeout=10)
+                test_conn = await asyncpg.connect(url, command_timeout=30)
                 await test_conn.execute("SELECT 1")
                 await test_conn.close()
                 logger.info("Simple connection test successful!")

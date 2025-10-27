@@ -40,7 +40,7 @@ if [ -n "$CLOUDSQL_CONNECTION_NAME" ]; then
     
     # Wait for proxy to start and be ready
     echo "Waiting for Cloud SQL Proxy to be ready..."
-    sleep 5
+    sleep 10
     
     # Test if the proxy is ready by trying to connect
     for i in {1..30}; do

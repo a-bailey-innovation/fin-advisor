@@ -26,7 +26,7 @@ def run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProce
     # Use PowerShell execution policy bypass for gcloud commands on Windows
     if cmd[0] == "gcloud" and os.name == "nt":
         # Properly escape the command for PowerShell
-        cmd_str = " ".join(cmd[1:])  # Skip 'gcloud' and join the rest
+        cmd_str = " ".join(f'"{arg}"' if " " in arg else arg for arg in cmd[1:])
         cmd = ["powershell", "-ExecutionPolicy", "Bypass", "-Command", f"gcloud {cmd_str}"]
     
     result = subprocess.run(cmd, capture_output=True, text=True, check=check)
