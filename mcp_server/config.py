@@ -20,20 +20,15 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Cloud Run Configuration
-CLOUD_RUN_MODE = os.getenv("CLOUD_RUN_MODE", "false").lower() == "true"
-VPC_CONNECTOR_NAME = os.getenv("VPC_CONNECTOR_NAME", "finadvisor-vpc-connector")
-
-# CloudSQL Configuration
-CLOUDSQL_CONNECTION_NAME = os.getenv("CLOUDSQL_CONNECTION_NAME", "agent-space-demo-475212:us-central1:finadvisor-db")
+# Database Configuration
 DB_NAME = os.getenv("DB_NAME", "FinAdvisor")
 DB_USER = os.getenv("DB_USER", "finadvisor_user")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "FinAdvisorUser2024!")
-DB_HOST = os.getenv("DB_HOST", "34.29.136.71")  # Public IP from instance creation
+DB_HOST = os.getenv("DB_HOST", "34.29.136.71")  # Public IP
 DB_PORT = os.getenv("DB_PORT", "5432")
 
-# CloudSQL Private IP Configuration (for VPC connector)
-CLOUDSQL_PRIVATE_IP = os.getenv("CLOUDSQL_PRIVATE_IP")  # Set by CloudSQL when private IP is enabled
+# Private IP Configuration (for VPC connector)
+CLOUDSQL_PRIVATE_IP = os.getenv("CLOUDSQL_PRIVATE_IP")
 USE_PRIVATE_IP = os.getenv("USE_PRIVATE_IP", "false").lower() == "true"
 
 # MCP Server Configuration
@@ -47,13 +42,8 @@ HTTP_PORT = int(os.getenv("HTTP_PORT", "8080"))
 # Database connection configuration
 def get_database_url() -> str:
     """Get database URL based on configuration"""
-    print(f"DEBUG: CLOUD_RUN_MODE={CLOUD_RUN_MODE}")
-    print(f"DEBUG: USE_PRIVATE_IP={USE_PRIVATE_IP}")
-    print(f"DEBUG: CLOUDSQL_PRIVATE_IP={CLOUDSQL_PRIVATE_IP}")
-    print(f"DEBUG: CLOUDSQL_CONNECTION_NAME={CLOUDSQL_CONNECTION_NAME}")
-    
     # Use direct connection to Cloud SQL instance
-    if CLOUD_RUN_MODE and USE_PRIVATE_IP and CLOUDSQL_PRIVATE_IP:
+    if USE_PRIVATE_IP and CLOUDSQL_PRIVATE_IP:
         # Use private IP via VPC connector
         host = CLOUDSQL_PRIVATE_IP
         port = DB_PORT

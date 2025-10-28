@@ -103,13 +103,8 @@ def build_and_deploy(
         cloudsql_private_ip = os.getenv("CLOUDSQL_PRIVATE_IP")
         use_private_ip = os.getenv("USE_PRIVATE_IP", "false")
         
-        # Get Cloud SQL connection name
-        cloudsql_connection_name = os.getenv("CLOUDSQL_CONNECTION_NAME", f"{project_id}:{region}:finadvisor-db")
-        
         # Build environment variables
         env_vars = [
-            f"CLOUD_RUN_MODE=true",
-            f"CLOUDSQL_CONNECTION_NAME={cloudsql_connection_name}",
             f"DB_USER={db_user}",
             f"DB_PASSWORD={db_password}",
             f"DB_NAME={db_name}",

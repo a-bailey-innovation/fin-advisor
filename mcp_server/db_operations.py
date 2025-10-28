@@ -44,7 +44,7 @@ class DatabaseManager:
         db_name = os.getenv("DB_NAME", "FinAdvisor")
         db_port = os.getenv("DB_PORT", "5432")
         
-        # Always try the configured URL first (direct connection)
+        # Try the configured URL first
         urls_to_try.append(database_url)
         
         # Try private IP if configured
@@ -52,7 +52,7 @@ class DatabaseManager:
             private_ip = os.getenv("CLOUDSQL_PRIVATE_IP")
             urls_to_try.append(f"postgresql://{db_user}:{db_password}@{private_ip}:{db_port}/{db_name}")
         
-        # Add public IP as final fallback
+        # Add public IP as fallback
         public_ip = os.getenv("DB_HOST", "34.29.136.71")
         urls_to_try.append(f"postgresql://{db_user}:{db_password}@{public_ip}:{db_port}/{db_name}")
         
